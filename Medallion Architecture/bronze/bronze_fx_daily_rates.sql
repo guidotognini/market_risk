@@ -9,7 +9,7 @@ SELECT
   results,
   _metadata.file_path AS source_file,
   _metadata.file_modification_time AS ingestion_time
-FROM read_files(
+FROM cloud_files(
   '/Volumes/tabular/dataexpert/guidotognini/market_risk/raw_fx_daily_rates/*',
   'json',
   MAP(
