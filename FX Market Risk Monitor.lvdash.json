@@ -1,0 +1,528 @@
+{
+  "datasets": [
+    {
+      "name": "bb24dba9",
+      "displayName": "daily_var",
+      "queryLines": [
+        "SELECT \r\n",
+        "  CAST(date AS date) date,\r\n",
+        "  currency_pair,\r\n",
+        "  desk,\r\n",
+        "  position_size,\r\n",
+        "  direction,\r\n",
+        "  var_95_base_currency,\r\n",
+        "  var_95_usd,\r\n",
+        "  volatility_30d,\r\n",
+        "  current_rate,\r\n",
+        "  ROW_NUMBER() OVER(PARTITION BY currency_pair, desk ORDER BY date DESC) AS days_ago\r\n",
+        "FROM tabular.dataexpert.gold_fct_var"
+      ]
+    },
+    {
+      "name": "05f93ffd",
+      "displayName": "current_var",
+      "queryLines": [
+        "WITH current_var AS (\r\n",
+        "  SELECT\r\n",
+        "    currency_pair,\r\n",
+        "    desk,\r\n",
+        "    SUM(var_95_base_currency) var_95_base_currency,\r\n",
+        "    SUM(var_95_usd) var_95_usd\r\n",
+        "  FROM tabular.dataexpert.gold_fct_var\r\n",
+        "  WHERE date = (SELECT MAX(date) FROM gold_fct_var)\r\n",
+        "  GROUP BY 1, 2\r\n",
+        ")\r\n",
+        "\r\n",
+        "SELECT\r\n",
+        "  currency_pair,\r\n",
+        "  desk,\r\n",
+        "  var_95_base_currency,\r\n",
+        "  var_95_usd,\r\n",
+        "  ROW_NUMBER() OVER (ORDER BY var_95_usd DESC) var_rank -- use row_number to avoid ties here to avoid breaking the graph, even though chances of tie are extremely minimal\r\n",
+        "FROM current_var"
+      ],
+      "catalog": "tabular",
+      "schema": "dataexpert"
+    },
+    {
+      "name": "6a9085e5",
+      "displayName": "var_delta",
+      "queryLines": [
+        "WITH daily_var AS (\r\n",
+        "  SELECT \r\n",
+        "    CAST(date AS date) date,\r\n",
+        "    SUM(var_95_usd) var_95_usd\r\n",
+        "  FROM tabular.dataexpert.gold_fct_var\r\n",
+        "  GROUP BY 1\r\n",
+        "),\r\n",
+        "var_with_delta AS (\r\n",
+        "  SELECT\r\n",
+        "    date,\r\n",
+        "    var_95_usd,\r\n",
+        "    var_95_usd/LAG(var_95_usd) OVER (ORDER BY date) - 1 AS var_95_usd_delta,\r\n",
+        "    ROW_NUMBER() OVER(ORDER BY date DESC) AS days_ago\r\n",
+        "  FROM daily_var\r\n",
+        ")\r\n",
+        "SELECT\r\n",
+        "  date,\r\n",
+        "  var_95_usd,\r\n",
+        "  var_95_usd_delta,\r\n",
+        "  days_ago,\r\n",
+        "  -- Formatted delta for display\r\n",
+        "  CONCAT(\r\n",
+        "    CASE \r\n",
+        "      WHEN var_95_usd_delta > 0 THEN '↑ +'\r\n",
+        "      WHEN var_95_usd_delta < 0 THEN '↓ '\r\n",
+        "      ELSE '→ '\r\n",
+        "    END,\r\n",
+        "    ROUND(var_95_usd_delta * 100, 1),\r\n",
+        "    '%'\r\n",
+        "  ) AS var_change_display\r\n",
+        "FROM var_with_delta"
+      ]
+    },
+    {
+      "name": "d7e3435b",
+      "displayName": "stress_scenario",
+      "queryLines": [
+        "WITH latest_data AS (\r\n",
+        "  SELECT \r\n",
+        "    currency_pair,\r\n",
+        "    position_size,\r\n",
+        "    current_rate,\r\n",
+        "    date\r\n",
+        "  FROM tabular.dataexpert.gold_fct_var\r\n",
+        "  WHERE date = (SELECT MAX(date) FROM tabular.dataexpert.gold_fct_var)\r\n",
+        ")\r\n",
+        "SELECT\r\n",
+        "  SUM(\r\n",
+        "    CASE \r\n",
+        "        WHEN LEFT(currency_pair, 3) = 'USD' THEN\r\n",
+        "            position_size * 0.01\r\n",
+        "      ELSE\r\n",
+        "        position_size * 0.01 * current_rate\r\n",
+        "    END\r\n",
+        "  ) AS stress_loss_1pct\r\n",
+        "FROM latest_data"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "8c10ff2e",
+      "displayName": "VaR & Volatility",
+      "layout": [
+        {
+          "widget": {
+            "name": "e49788e0",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "05f93ffd",
+                  "fields": [
+                    {
+                      "name": "sum(var_95_usd)",
+                      "expression": "SUM(`var_95_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(var_95_usd)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  },
+                  "style": {
+                    "fontSize": 60
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Portfolio VaR (95%, 1-Day) ",
+                "showDescription": true,
+                "description": "The maximum expected 1-day loss at 95% confidence. If this number increases, the portfolio is becoming riskier.",
+                "headerAlignment": "left"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 2,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "8811437b",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "05f93ffd",
+                  "fields": [
+                    {
+                      "name": "sum(var_95_usd)",
+                      "expression": "SUM(`var_95_usd`)"
+                    },
+                    {
+                      "name": "currency_pair",
+                      "expression": "`currency_pair`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(var_95_usd)",
+                  "scale": {
+                    "type": "quantitative",
+                    "reverse": false
+                  },
+                  "axis": {
+                    "hideTitle": true,
+                    "hideGrid": false,
+                    "hideLabels": false
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "currency_pair",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  },
+                  "axis": {
+                    "hideTitle": true,
+                    "hideLabels": false
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Value at Risk by Currency Pair (USD)",
+                "showDescription": true,
+                "description": "Shows which currency pairs contribute most to portfolio risk. Focus risk management on the top 2-3 pairs."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "142bb261",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bb24dba9",
+                  "fields": [
+                    {
+                      "name": "daily(date)",
+                      "expression": "DATE_TRUNC(\"DAY\", `date`)"
+                    },
+                    {
+                      "name": "sum(volatility_30d)",
+                      "expression": "SUM(`volatility_30d`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "IN_RANGE(`days_ago`, 0, 30)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "daily(date)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "format": {
+                    "type": "date",
+                    "date": "locale-short-month"
+                  },
+                  "axis": {
+                    "hideGrid": true
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(volatility_30d)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "displayName": "30d Volatility"
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Market Volatility Trend (30-Day Rolling Avg)",
+                "showDescription": true,
+                "description": "Measures market turbulence (independent of positions). Rising volatility = expect higher VaR. Use this to anticipate risk changes."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "18264b4d",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "bb24dba9",
+                  "fields": [
+                    {
+                      "name": "daily(date)",
+                      "expression": "DATE_TRUNC(\"DAY\", `date`)"
+                    },
+                    {
+                      "name": "sum(var_95_usd)",
+                      "expression": "SUM(`var_95_usd`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "IN_RANGE(`days_ago`, 1, 30)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "daily(date)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "axis": {
+                    "hideGrid": true
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(var_95_usd)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "VaR 95 USD"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Portfolio VaR Trend",
+                "headerAlignment": "left",
+                "showDescription": true,
+                "description": "Tracks total risk over time. Rising trend = need to reduce positions or hedge. Sudden drops may indicate market calm or position reduction."
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 4,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "9f816df4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "d7e3435b",
+                  "fields": [
+                    {
+                      "name": "max(stress_loss_1pct)",
+                      "expression": "MAX(`stress_loss_1pct`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "max(stress_loss_1pct)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  },
+                  "style": {
+                    "fontSize": 60
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Stress Scenario (+1% Adverse Move)",
+                "showDescription": true,
+                "description": "Estimated loss if all currency pairs move 1% against us simultaneously. Use for stress testing and limit setting."
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 2,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "1f142f8f",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "6a9085e5",
+                  "fields": [
+                    {
+                      "name": "var_change_display",
+                      "expression": "`var_change_display`"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "IN_RANGE(`days_ago`, 1, 1)"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "var_change_display",
+                  "style": {
+                    "fontSize": 60,
+                    "rules": [
+                      {
+                        "condition": {
+                          "operator": "contains",
+                          "operand": {
+                            "type": "data-value",
+                            "value": "+"
+                          }
+                        },
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 4
+                        }
+                      },
+                      {
+                        "condition": {
+                          "operator": "contains",
+                          "operand": {
+                            "type": "data-value",
+                            "value": "-"
+                          }
+                        },
+                        "color": "#00A972"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Change VS Previous Day",
+                "showDescription": true,
+                "description": "Positive % = Risk increased | Negative % = Risk decreased."
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 0,
+            "width": 2,
+            "height": 4
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "genieSpace": {
+      "isEnabled": false
+    }
+  }
+}
