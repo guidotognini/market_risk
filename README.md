@@ -12,49 +12,42 @@ This pipeline answers critical questions for FX trading desk risk managers:
 - **How would a 1% market shock impact us?** (Stress testing)
 
 ## 🏗️ Architecture
-```
-┌─────────────────┐
-│  Polygon API    │  Daily FX rates (EUR/USD, GBP/USD, USD/JPY, USD/CHF, USD/BRL)
-└────────┬────────┘
-         │ Extract (Python)
-         ▼
-┌─────────────────────────────────────────────────────────┐
-│              Databricks Workspace                       │
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │  BRONZE LAYER (Raw Ingestion)                    │  │
-│  │  • Auto Loader (cloud_files)                     │  │
-│  │  • Schema evolution enabled                      │  │
-│  │  • Full historical data preserved                │  │
-│  └────────────────┬─────────────────────────────────┘  │
-│                   │                                     │
-│  ┌────────────────▼─────────────────────────────────┐  │
-│  │  SILVER LAYER (Cleaned & Enriched)               │  │
-│  │  • fx_daily_rates: Validated OHLC data           │  │
-│  │  • fx_daily_returns: Day-over-day % changes      │  │
-│  │  • daily_positions: Simulated trading positions  │  │
-│  └────────────────┬─────────────────────────────────┘  │
-│                   │                                     │
-│  ┌────────────────▼─────────────────────────────────┐  │
-│  │  GOLD LAYER (Analytics-Ready)                    │  │
-│  │  • fct_var: Daily VaR metrics by currency        │  │
-│  │    - 5th/95th percentile returns (30-day window) │  │
-│  │    - Position-weighted VaR in USD                │  │
-│  │    - Rolling 30-day volatility                   │  │
-│  │    - Current exchange rates for stress testing   │  │
-│  └────────────────┬─────────────────────────────────┘  │
-│                   │                                     │
-│  ┌────────────────▼─────────────────────────────────┐  │
-│  │  DASHBOARD (Databricks SQL)                      │  │
-│  │  • Total Portfolio VaR                           │  │
-│  │  • Day-over-day change %                         │  │
-│  │  • Stress scenario (+1% shock)                   │  │
-│  │  • Risk breakdown by currency (bar chart)        │  │
-│  │  • Portfolio VaR trend (line chart)              │  │
-│  │  • Market volatility trend (line chart)          │  │
-│  └──────────────────────────────────────────────────┘  │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A[Polygon API - Daily FX Rates] -->|Python Extract| B[S3 Landing Zone - Raw JSON Files]
+    
+    B --> C[BRONZE LAYER - bronze_fx_daily_rates]
+    B --> D[BRONZE LAYER - bronze_positions]
+    
+    C -->|Auto Loader - Schema Evolution| E[SILVER LAYER - silver_fx_daily_rates]
+    
+    E -->|LAG Calculation - Day-over-day| F[SILVER LAYER - silver_fx_daily_returns - % Changes]
+    
+    D -->|Clean & Validate| G[SILVER LAYER - silver_daily_positions - Trading Positions]
+    
+    F -->|30-day Window - Percentile Calc| H[GOLD LAYER - gold_fct_var - VaR Metrics]
+    G -->|Join| H
+    E -->|Current Rates| H
+    
+    H -->|SQL Queries| I[DASHBOARD - Databricks SQL]
+    
+    I --> J[Total Portfolio VaR]
+    I --> K[Risk by Currency]
+    I --> L[VaR Trend]
+    I --> M[Volatility Trend]
+    
+    style A fill:#e1f5ff
+    style C fill:#fff4e6
+    style D fill:#fff4e6
+    style E fill:#e8f5e9
+    style F fill:#e8f5e9
+    style G fill:#e8f5e9
+    style H fill:#f3e5f5
+    style I fill:#fce4ec
+    style J fill:#ffebee
+    style K fill:#ffebee
+    style L fill:#ffebee
+    style M fill:#ffebee
 ```
 
 **Technology Stack:**
