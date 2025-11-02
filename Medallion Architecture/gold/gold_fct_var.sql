@@ -1,3 +1,7 @@
+-- Gold Layer: VaR (Value at Risk) Fact Table
+-- Calculates 95% confidence VaR using rolling 30-day historical simulation
+-- Configuration: All VaR parameters are configurable via DLT pipeline config
+
 CREATE MATERIALIZED VIEW gold_fct_var AS
 WITH aggregated_daily_returns AS (
   SELECT
@@ -17,7 +21,7 @@ daily_returns_to_calculate_percentiles AS (
     row_number() over (PARTITION BY t1.date, t1.currency_pair ORDER BY t2.date DESC) rn
   FROM aggregated_daily_returns t1
   JOIN aggregated_daily_returns t2
-    ON t2.date BETWEEN t1.date - INTERVAL 35 DAYS AND t1.date
+    ON t2.date BETWEEN t1.date - INTERVAL ${lookback_interval_days} DAYS AND t1.date
       AND t2.currency_pair = t1.currency_pair
 ),
 
@@ -26,10 +30,10 @@ daily_returns_percentiles AS (
     date,
     currency_pair,
     daily_return,
-    percentile_cont(0.05) WITHIN GROUP (ORDER BY previous_daily_returns) 5th_percentile,
-    percentile_cont(0.95) WITHIN GROUP (ORDER BY previous_daily_returns) 95th_percentile
+    percentile_cont(${percentile_long}) WITHIN GROUP (ORDER BY previous_daily_returns) 5th_percentile,
+    percentile_cont(${percentile_short}) WITHIN GROUP (ORDER BY previous_daily_returns) 95th_percentile
   FROM daily_returns_to_calculate_percentiles
-  WHERE date >= '2025-01-01' AND rn <= 30
+  WHERE date >= '${minimum_data_date}' AND rn <= ${lookback_days}
   GROUP BY 1, 2, 3
 ),
 
@@ -68,7 +72,7 @@ SELECT
         ELSE 0 
         END
   END AS var_95_usd,
-  stddev(daily_return) OVER (PARTITION BY dp.currency_pair ORDER BY dp.date ROWS BETWEEN 29 PRECEDING AND CURRENT ROW) volatility_30d,
+  stddev(daily_return) OVER (PARTITION BY dp.currency_pair ORDER BY dp.date ROWS BETWEEN ${lookback_days} - 1 PRECEDING AND CURRENT ROW) volatility_30d,
   current_rate
 FROM LIVE.silver_daily_positions dp
 JOIN daily_returns_percentiles rp

@@ -1,0 +1,65 @@
+# Development Environment Configuration
+# Override settings for dev/testing environment
+
+environment: dev
+
+# Databricks Workspace Configuration
+databricks:
+  catalog: tabular_dev
+  schema: dataexpert_dev
+  username: guidotognini
+
+# Storage Paths (Volumes)
+storage:
+  base_path: /Volumes/tabular_dev/dataexpert_dev/guidotognini/market_risk
+
+  raw_data:
+    fx_rates: /Volumes/tabular_dev/dataexpert_dev/guidotognini/market_risk/raw_fx_daily_rates
+    positions: /Volumes/tabular_dev/dataexpert_dev/guidotognini/market_risk/raw_positions
+
+  schemas:
+    fx_rates: /Volumes/tabular_dev/dataexpert_dev/guidotognini/market_risk/_schemas/fx_daily_rates_bronze
+    positions: /Volumes/tabular_dev/dataexpert_dev/guidotognini/market_risk/_schemas/raw_positions
+
+# DLT Pipeline Configuration
+dlt_pipeline:
+  name: fx_market_risk_dev
+  target_schema: dataexpert_dev
+  storage_location: /pipelines/fx_market_risk_dev
+  configuration:
+    pipelines.enableTrackHistory: true
+    pipelines.trigger.interval: "12 hours"
+
+# Compute Configuration
+compute:
+  cluster_mode: single_node
+  node_type_id: i3.xlarge
+  driver_node_type_id: i3.xlarge
+  num_workers: 0
+  spark_version: 14.3.x-scala2.12
+  autoscale:
+    min_workers: 0
+    max_workers: 2
+
+# Job Scheduling (Dev - Manual/On-Demand)
+scheduling:
+  fx_extraction:
+    enabled: false
+    cron_expression: "0 0 * * *"  # Daily at midnight (disabled)
+
+  position_generation:
+    enabled: false
+    cron_expression: "0 1 * * *"  # Daily at 1 AM (disabled)
+
+# Notification Settings (Dev)
+notifications:
+  on_failure: false
+  on_success: false
+  email_recipients: []
+
+# Feature Flags (Dev)
+features:
+  enable_monitoring: true
+  enable_data_quality_checks: true
+  enable_position_limits: false
+  debug_mode: true

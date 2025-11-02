@@ -1,3 +1,7 @@
+-- Silver Layer: FX Daily Returns
+-- Calculates day-over-day returns using LAG window function
+-- Configuration: Anomaly threshold is parameterized
+
 CREATE OR REFRESH MATERIALIZED VIEW silver_fx_daily_returns
 (
   date DATE COMMENT "Trading date (includes Sunday evening data when FX markets open)",
@@ -6,9 +10,9 @@ CREATE OR REFRESH MATERIALIZED VIEW silver_fx_daily_returns
   prev_close_rate DECIMAL(18,6) COMMENT "Previous trading day close (automatically skips Saturday gaps)",
   daily_return DECIMAL(18,16) COMMENT "Percentage return: (today_close / prev_close) - 1",
   processed_time TIMESTAMP NOT NULL,
-  CONSTRAINT valid_return EXPECT (daily_return IS NOT NULL OR prev_close_rate IS NULL) 
+  CONSTRAINT valid_return EXPECT (daily_return IS NOT NULL OR prev_close_rate IS NULL)
     ON VIOLATION DROP ROW,
-  CONSTRAINT reasonable_return EXPECT (ABS(daily_return) < 0.15 OR daily_return IS NULL)
+  CONSTRAINT reasonable_return EXPECT (ABS(daily_return) < ${return_anomaly_threshold} OR daily_return IS NULL)
     ON VIOLATION FAIL UPDATE
 )
 COMMENT "FX daily returns - calculated using trading days only (Polygon API excludes Saturdays)"

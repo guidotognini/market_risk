@@ -1,0 +1,69 @@
+# Production Environment Configuration
+# Override settings for production environment
+
+environment: prod
+
+# Databricks Workspace Configuration
+databricks:
+  catalog: tabular
+  schema: dataexpert
+  username: guidotognini
+
+# Storage Paths (Volumes)
+storage:
+  base_path: /Volumes/tabular/dataexpert/guidotognini/market_risk
+
+  raw_data:
+    fx_rates: /Volumes/tabular/dataexpert/guidotognini/market_risk/raw_fx_daily_rates
+    positions: /Volumes/tabular/dataexpert/guidotognini/market_risk/raw_positions
+
+  schemas:
+    fx_rates: /Volumes/tabular/dataexpert/guidotognini/market_risk/_schemas/fx_daily_rates_bronze
+    positions: /Volumes/tabular/dataexpert/guidotognini/market_risk/_schemas/raw_positions
+
+# DLT Pipeline Configuration
+dlt_pipeline:
+  name: fx_market_risk_prod
+  target_schema: dataexpert
+  storage_location: /pipelines/fx_market_risk_prod
+  configuration:
+    pipelines.enableTrackHistory: true
+    pipelines.trigger.interval: "1 hour"
+
+# Compute Configuration
+compute:
+  cluster_mode: autoscale
+  node_type_id: i3.xlarge
+  driver_node_type_id: i3.xlarge
+  num_workers: 2
+  spark_version: 14.3.x-scala2.12
+  autoscale:
+    min_workers: 1
+    max_workers: 4
+
+# Job Scheduling (Prod - Automated)
+scheduling:
+  fx_extraction:
+    enabled: true
+    cron_expression: "0 0 * * *"  # Daily at midnight UTC
+    timezone: Europe/Madrid
+
+  position_generation:
+    enabled: true
+    cron_expression: "0 1 * * *"  # Daily at 1 AM UTC
+    timezone: Europe/Madrid
+
+# Notification Settings (Prod)
+notifications:
+  on_failure: true
+  on_success: false
+  email_recipients:
+    - fx-risk-team@example.com
+    - data-engineering@example.com
+
+# Feature Flags (Prod)
+features:
+  enable_monitoring: true
+  enable_data_quality_checks: true
+  enable_position_limits: true
+  debug_mode: false
