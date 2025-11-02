@@ -1,10 +1,10 @@
-# Job Definition - Currency Positions | VaR
+# Job Definition - Currency Positions - VaR
 # Orchestrates data extraction, mock data generation, and DLT pipeline execution
 
 resources:
   jobs:
     currency_positions_var:
-      name: Currency Positions | VaR
+      name: Currency Positions - VaR
 
       # Schedule: Daily at 5:00 AM (Casablanca timezone)
       schedule:
@@ -52,7 +52,7 @@ resources:
         # Task 1: Generate mock daily positions data
         - task_key: Daily_Positions_Mock_Data_Generator
           notebook_task:
-            notebook_path: Mock Data Generator | Daily Positions.ipynb
+            notebook_path: Mock Data Generator - Daily Positions.ipynb
             source: GIT
           job_cluster_key: FX_Rates_Extraction_cluster
           max_retries: 1
@@ -62,7 +62,7 @@ resources:
         # Task 2: Extract FX rates from Polygon API
         - task_key: FX_Rates_Extraction
           notebook_task:
-            notebook_path: Polygon API Extraction | Daily FX Rates.ipynb
+            notebook_path: Polygon API Extraction - Daily FX Rates.ipynb
             source: GIT
           job_cluster_key: FX_Rates_Extraction_cluster
           max_retries: 1
