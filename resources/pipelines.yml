@@ -18,23 +18,23 @@ resources:
       libraries:
         # Bronze layer tables
         - file:
-            path: ./DLT Pipeline | Medallion Architecture/bronze/bronze_daily_positions.sql
+            path: ../DLT Pipeline | Medallion Architecture/bronze/bronze_daily_positions.sql
         - file:
-            path: ./DLT Pipeline | Medallion Architecture/bronze/bronze_fx_daily_rates.sql
+            path: ../DLT Pipeline | Medallion Architecture/bronze/bronze_fx_daily_rates.sql
 
         # Silver layer tables
         - file:
-            path: ./DLT Pipeline | Medallion Architecture/silver/silver_daily_positions.sql
+            path: ../DLT Pipeline | Medallion Architecture/silver/silver_daily_positions.sql
         - file:
-            path: ./DLT Pipeline | Medallion Architecture/silver/silver_fx_daily_rates.sql
+            path: ../DLT Pipeline | Medallion Architecture/silver/silver_fx_daily_rates.sql
         - file:
-            path: ./DLT Pipeline | Medallion Architecture/silver/silver_fx_daily_rates_staging.sql
+            path: ../DLT Pipeline | Medallion Architecture/silver/silver_fx_daily_rates_staging.sql
         - file:
-            path: ./DLT Pipeline | Medallion Architecture/silver/silver_fx_daily_returns.sql
+            path: ../DLT Pipeline | Medallion Architecture/silver/silver_fx_daily_returns.sql
 
         # Gold layer tables
         - file:
-            path: ./DLT Pipeline | Medallion Architecture/gold/gold_fct_var.sql
+            path: ../DLT Pipeline | Medallion Architecture/gold/gold_fct_var.sql
 
       # Target database and storage
       target: tabular.dataexpert
