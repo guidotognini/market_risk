@@ -1,0 +1,47 @@
+# Databricks Asset Bundle Configuration
+# FX Market Risk Pipeline - Job as Code
+
+bundle:
+  name: market_risk
+
+# Include resource definitions
+include:
+  - resources/*.yml
+
+# Target for deployment (single environment for now)
+targets:
+  default:
+    mode: development
+    workspace:
+      # The workspace URL will be determined by the Databricks CLI profile
+      # To deploy: databricks bundle deploy -t default
+      root_path: ~/.bundle/${bundle.name}/${bundle.target}
+
+# Variables that can be referenced across all resource files
+variables:
+  # Git configuration
+  git_url:
+    description: "Git repository URL for the project"
+    default: "https://github.com/guidotognini/market_risk.git"
+
+  git_branch:
+    description: "Git branch to use"
+    default: "main"
+
+  # DLT pipeline configuration
+  pipeline_name:
+    description: "Name of the DLT pipeline"
+    default: "fx_market_risk_medallion"
+
+  # Cluster configuration
+  spark_version:
+    description: "Spark version for compute"
+    default: "17.3.x-scala2.13"
+
+  node_type:
+    description: "Node type for compute"
+    default: "c5d.xlarge"
+
+  cluster_policy_id:
+    description: "Cluster policy ID (update for your workspace)"
+    default: "000F602AE923EB35"

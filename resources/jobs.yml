@@ -1,0 +1,82 @@
+# Job Definition - Currency Positions | VaR
+# Orchestrates data extraction, mock data generation, and DLT pipeline execution
+
+resources:
+  jobs:
+    currency_positions_var:
+      name: Currency Positions | VaR
+
+      # Schedule: Daily at 5:00 AM (Casablanca timezone)
+      schedule:
+        quartz_cron_expression: 12 0 5 * * ?
+        timezone_id: Africa/Casablanca
+        pause_status: UNPAUSED
+
+      # Queue configuration
+      queue:
+        enabled: true
+
+      # Performance optimization
+      performance_target: PERFORMANCE_OPTIMIZED
+
+      # Git source configuration
+      git_source:
+        git_url: ${var.git_url}
+        git_provider: gitHub
+        git_branch: ${var.git_branch}
+
+      # Job cluster configuration for FX Rates extraction
+      job_clusters:
+        - job_cluster_key: FX_Rates_Extraction_cluster
+          new_cluster:
+            cluster_name: ""
+            spark_version: ${var.spark_version}
+            aws_attributes:
+              first_on_demand: 1
+              availability: SPOT_WITH_FALLBACK
+              zone_id: auto
+              spot_bid_price_percent: 100
+            node_type_id: ${var.node_type}
+            spark_env_vars:
+              PYSPARK_PYTHON: /databricks/python3/bin/python3
+            enable_elastic_disk: true
+            policy_id: ${var.cluster_policy_id}
+            data_security_mode: USER_ISOLATION
+            runtime_engine: STANDARD
+            kind: CLASSIC_PREVIEW
+            is_single_node: false
+            num_workers: 1
+
+      # Task definitions
+      tasks:
+        # Task 1: Generate mock daily positions data
+        - task_key: Daily_Positions_Mock_Data_Generator
+          notebook_task:
+            notebook_path: Mock Data Generator | Daily Positions.ipynb
+            source: GIT
+          job_cluster_key: FX_Rates_Extraction_cluster
+          max_retries: 1
+          min_retry_interval_millis: 30000
+          disable_auto_optimization: false
+
+        # Task 2: Extract FX rates from Polygon API
+        - task_key: FX_Rates_Extraction
+          notebook_task:
+            notebook_path: Polygon API Extraction | Daily FX Rates.ipynb
+            source: GIT
+          job_cluster_key: FX_Rates_Extraction_cluster
+          max_retries: 1
+          min_retry_interval_millis: 300000
+
+        # Task 3: DLT Pipeline - Transform data through medallion layers
+        # IMPORTANT: Uses dynamic reference to pipeline instead of hardcoded ID
+        - task_key: Data_Layers_Transformation
+          depends_on:
+            - task_key: Daily_Positions_Mock_Data_Generator
+            - task_key: FX_Rates_Extraction
+          pipeline_task:
+            # Dynamic reference to the pipeline defined in pipelines.yml
+            pipeline_id: ${resources.pipelines.fx_market_risk_medallion.id}
+            full_refresh: false
+          max_retries: 1
+          min_retry_interval_millis: 900000
