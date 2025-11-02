@@ -10,19 +10,19 @@ resources:
 
       libraries:
         - file:
-            path: ./DLT Pipeline - Medallion Architecture/bronze/bronze_daily_positions.sql
+            path: ../DLT Pipeline - Medallion Architecture/bronze/bronze_daily_positions.sql
         - file:
-            path: ./DLT Pipeline - Medallion Architecture/bronze/bronze_fx_daily_rates.sql
+            path: ../DLT Pipeline - Medallion Architecture/bronze/bronze_fx_daily_rates.sql
         - file:
-            path: ./DLT Pipeline - Medallion Architecture/silver/silver_daily_positions.sql
+            path: ../DLT Pipeline - Medallion Architecture/silver/silver_daily_positions.sql
         - file:
-            path: ./DLT Pipeline - Medallion Architecture/silver/silver_fx_daily_rates.sql
+            path: ../DLT Pipeline - Medallion Architecture/silver/silver_fx_daily_rates.sql
         - file:
-            path: ./DLT Pipeline - Medallion Architecture/silver/silver_fx_daily_rates_staging.sql
+            path: ../DLT Pipeline - Medallion Architecture/silver/silver_fx_daily_rates_staging.sql
         - file:
-            path: ./DLT Pipeline - Medallion Architecture/silver/silver_fx_daily_returns.sql
+            path: ../DLT Pipeline - Medallion Architecture/silver/silver_fx_daily_returns.sql
         - file:
-            path: ./DLT Pipeline - Medallion Architecture/gold/gold_fct_var.sql
+            path: ../DLT Pipeline - Medallion Architecture/gold/gold_fct_var.sql
 
       target: tabular.dataexpert
       storage: /Volumes/tabular/dataexpert/guidotognini/market_risk/_dlt_storage
