@@ -1,0 +1,35 @@
+# Market Risk Configuration
+# Single source of truth for currency pairs and their base position sizes
+
+# Currency pairs with their base position sizes (by liquidity)
+# Format: PAIR: size (no slashes - API ready)
+# To add a new pair: add one line with pair and size
+
+currency_pairs:
+  EURUSD: 15_000_000  # Highest liquidity
+  GBPUSD: 8_000_000
+  USDJPY: 10_000_000
+  USDCHF: 5_000_000
+  USDBRL: 3_000_000   # Lower liquidity
+
+# Storage paths
+storage:
+  volumes_base: "/Volumes/tabular/dataexpert/guidotognini/market_risk"
+  raw_fx_rates: "raw_fx_daily_rates"
+  raw_positions: "raw_positions"
+
+# Data source configuration
+data_sources:
+  polygon_api:
+    base_url: "https://api.polygon.io"
+    endpoint_template: "/v2/aggs/ticker/C:{pair}/range/1/day/{from_date}/{to_date}"
+
+# Position generation parameters
+position_generation:
+  long_ratio: 0.7      # 70% chance LONG
+  short_ratio: 0.3     # 30% chance SHORT
+  flat_ratio: 0.05     # 5% chance FLAT
+  daily_variation: 0.2 # +/- 20% random walk
+ 
+# Timezone for date operations
+timezone: "Europe/Madrid"

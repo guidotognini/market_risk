@@ -1,0 +1,17 @@
+# Market Risk Analytics - Python Dependencies
+
+# Core dependencies
+pyyaml>=6.0.1       # Configuration management
+requests>=2.31.0    # HTTP client for API calls
+pandas>=2.0.0       # Data manipulation
+pytz>=2023.3        # Timezone handling
+
+# Databricks/Spark (typically pre-installed in Databricks environment)
+# pyspark>=3.5.0    # Uncomment if running locally
+
+# Development dependencies (install separately or use requirements-dev.txt)
+# pytest>=7.4.0
+# pytest-cov>=4.1.0
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.5.0
