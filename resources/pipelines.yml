@@ -1,28 +1,18 @@
-# DLT Pipeline Definition
-# Medallion Architecture: Bronze -> Silver -> Gold
-
 resources:
   pipelines:
     fx_market_risk_medallion:
       name: ${var.pipeline_name}
 
-      # DLT pipeline configuration
       development: true
       continuous: false
       photon: false
-
-      # Channel for DLT runtime
       channel: CURRENT
 
-      # Source code configuration - all SQL files in DLT directory
       libraries:
-        # Bronze layer tables
         - file:
             path: ./DLT Pipeline | Medallion Architecture/bronze/bronze_daily_positions.sql
         - file:
             path: ./DLT Pipeline | Medallion Architecture/bronze/bronze_fx_daily_rates.sql
-
-        # Silver layer tables
         - file:
             path: ./DLT Pipeline | Medallion Architecture/silver/silver_daily_positions.sql
         - file:
@@ -31,23 +21,17 @@ resources:
             path: ./DLT Pipeline | Medallion Architecture/silver/silver_fx_daily_rates_staging.sql
         - file:
             path: ./DLT Pipeline | Medallion Architecture/silver/silver_fx_daily_returns.sql
-
-        # Gold layer tables
         - file:
             path: ./DLT Pipeline | Medallion Architecture/gold/gold_fct_var.sql
 
-      # Target database and storage
       target: tabular.dataexpert
-
-      # Storage location for pipeline tables and metadata
       storage: /Volumes/tabular/dataexpert/guidotognini/market_risk/_dlt_storage
 
-      # Cluster configuration for DLT pipeline
       clusters:
         - label: default
           num_workers: 1
           node_type_id: ${var.node_type}
-          policy_id: ${var.cluster_policy_id}
+          # policy_id: ${var.cluster_policy_id}
 
       # Optional: Notifications for pipeline failures
       # notifications:
